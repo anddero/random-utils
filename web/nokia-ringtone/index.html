@@ -311,12 +311,12 @@
     // FUNCTIONS WITHOUT SIDE-EFFECTS
 
     function parseRtttl(rtttl) {
-        const [settingsStr, notesStr] = rtttl.split(':');
+        const [settingsStr, nodesStr] = rtttl.split(':');
         console.log(settingsStr);
-        console.log(notesStr);
+        console.log(nodesStr);
         const settings = parseRtttlSettings(settingsStr);
         console.log(settings);
-        let notes = notesStr.split(',')
+        let notes = nodesStr.split(',')
             .map(parseRtttlNote);
         console.log(notes);
         notes = notes.map(n => convertRtttlNote(settings, n));
