@@ -25,6 +25,7 @@
 </main>
 
 <!-- JavaScript Section -->
+<script src="https://unpkg.com/tone"></script>
 <script>
 
     // EVENT BINDINGS
@@ -35,6 +36,12 @@
 
     function onCreateButtonClick() {
         console.log("onCreateButtonClick");
+
+        const synth = new Tone.Synth({ oscillator: { type: 'square' } }).toDestination();
+        const notes = [{time:0, note:"A4", dur:"4n"}, {time:"+0.5", note:"F4", dur:"8n"}, {time:"+0.75", note:"G4", dur:"8n"}];
+        Tone.loaded().then(() => {
+            notes.forEach(n => synth.triggerAttackRelease(n.note, n.dur, Tone.now() + Tone.Time(n.time)));
+        });
     }
 
     // FUNCTIONS WITHOUT SIDE EFFECTS
