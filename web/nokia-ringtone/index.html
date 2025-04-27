@@ -148,7 +148,12 @@
                         sustain: 1,
                         release: 0.1
                     }
-                }).toDestination();
+                });
+
+                const crusher = new Tone.BitCrusher(4).toDestination(); // 4-bit hell
+                const distortion = new Tone.Distortion(0.7).connect(crusher);
+
+                g_synth.connect(distortion);
             }
 
             await Tone.start();
