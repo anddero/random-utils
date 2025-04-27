@@ -138,41 +138,17 @@
 
             // Initialize synth on first click if not already created
             if (!g_synth) {
-                g_synth = new Tone.PolySynth(Tone.Synth, {
-                                    oscillator: {
-                                        type: 'square8', // Use square wave with more harmonics
-                                        phase: 0,
-                                        harmonicity: 0.5, // Add some inharmonic content
-                                    },
-                                    envelope: {
-                                        attack: 0.001, // Extremely fast attack
-                                        decay: 0.01,
-                                        sustain: 0.9, 
-                                        release: 0.01, // Very short release for that abrupt Nokia sound
-                                    }
-                                })
-                                .connect(new Tone.Filter({
-                                    type: "highpass",
-                                    frequency: 1200, // Higher frequency cutoff
-                                    rolloff: -24 // Steeper slope
-                                }))
-                                .connect(new Tone.BiquadFilter({
-                                    type: "peaking",
-                                    frequency: 2500,
-                                    gain: 15, // Boost the higher mids for more "piercing" sound
-                                    Q: 3
-                                }))
-                                .connect(new Tone.Distortion({
-                                    distortion: 0.7, // More aggressive distortion
-                                    wet: 0.5 // Stronger effect
-                                }))
-                                .connect(new Tone.Compressor({
-                                    threshold: -24,
-                                    ratio: 12,
-                                    attack: 0.003,
-                                    release: 0.25
-                                }))
-                                .toDestination();
+                g_synth = new Tone.Synth({
+                    oscillator: {
+                        type: 'square'
+                    },
+                    envelope: {
+                        attack: 0.001,
+                        decay: 0.01,
+                        sustain: 1,
+                        release: 0.1
+                    }
+                }).toDestination();
             }
 
             await Tone.start();
