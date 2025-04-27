@@ -145,37 +145,6 @@
 
                 const distortion = new Tone.Distortion(0.6).toDestination();  // More distortion
                 g_synth.connect(distortion);
-
-                // const pwmLFO = new Tone.LFO({
-                //     frequency: 2,    // Low-frequency to modulate the width
-                //     min: 0.02,       // Very narrow pulse
-                //     max: 0.98        // Close to square but with modulation
-                // }).connect(g_synth.width);
-                // pwmLFO.start();
-                //
-                // const distortion = new Tone.Distortion(0.4).toDestination(); // Soft clipping
-                // g_synth.connect(distortion);
-                //
-                // const lowPassFilter = new Tone.Filter(1000, "lowpass").toDestination();  // 1kHz cutoff
-                // g_synth.connect(lowPassFilter);
-                //
-                // const highPassFilter = new Tone.Filter(20000, "highpass").toDestination(); // High cut-off at 20kHz
-                // lowPassFilter.connect(highPassFilter);
-
-// Set up the Tone.Part
-//                 g_currentPart = new Tone.Part((time, note) => {
-//                     const noteDuration = Tone.Time(note.dur).toSeconds();
-//
-//                     // Set the frequency for each note
-//                     g_synth.frequency.setValueAtTime(Tone.Frequency(note.note).toFrequency(), time);
-//
-//                     g_synth.start(time);
-//                     g_synth.stop(time + noteDuration);
-//                 }, toneNotes.map(n => [n.time, n]))
-//                     .start(0);
-//
-// // Start the LFO to modulate pulse width (PWM)
-
             }
 
 
@@ -271,7 +240,7 @@
             document.getElementById('statusMessage').textContent = "Processing audio...";
 
             // Process recorded audio chunks into 8000Hz mono WAV
-            const originalBlob = new Blob(g_recordedChunks, { type: 'audio/wav' });
+            const originalBlob = new Blob(g_recordedChunks, {type: 'audio/wav'});
             // const downsampledBlob = await downsampleAudio(originalBlob, 8000);
             const audioUrl = URL.createObjectURL(originalBlob);
 
@@ -431,7 +400,7 @@
                     `;
 
                     // Create a Blob URL from the processor code
-                    const blob = new Blob([processorCode], { type: 'application/javascript' });
+                    const blob = new Blob([processorCode], {type: 'application/javascript'});
                     const processorUrl = URL.createObjectURL(blob);
 
                     // Load the processor from the Blob URL
@@ -488,7 +457,7 @@
 
                         // When done, notify the processor to send back the collected buffers
                         source.onended = () => {
-                            downsamplerNode.port.postMessage({ message: 'complete' });
+                            downsamplerNode.port.postMessage({message: 'complete'});
                         };
 
                         // Connect the nodes
@@ -514,48 +483,48 @@
         });
     }
 
-                        // Simple function to encode Float32Array as WAV
-                        function encodeWAV(samples, sampleRate) {
-                            const buffer = new ArrayBuffer(44 + samples.length * 2);
-                            const view = new DataView(buffer);
+    // Simple function to encode Float32Array as WAV
+    function encodeWAV(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
 
-                            // RIFF header
-                            writeString(view, 0, 'RIFF');
-                            view.setUint32(4, 36 + samples.length * 2, true);
-                            writeString(view, 8, 'WAVE');
+        // RIFF header
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeString(view, 8, 'WAVE');
 
-                            // fmt chunk
-                            writeString(view, 12, 'fmt ');
-                            view.setUint32(16, 16, true);
-                            view.setUint16(20, 1, true); // PCM format
-                            view.setUint16(22, 1, true); // Mono
-                            view.setUint32(24, sampleRate, true);
-                            view.setUint32(28, sampleRate * 2, true); // Byte rate
-                            view.setUint16(32, 2, true); // Block align
-                            view.setUint16(34, 16, true); // Bits per sample
+        // fmt chunk
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM format
+        view.setUint16(22, 1, true); // Mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true); // Byte rate
+        view.setUint16(32, 2, true); // Block align
+        view.setUint16(34, 16, true); // Bits per sample
 
-                            // data chunk
-                            writeString(view, 36, 'data');
-                            view.setUint32(40, samples.length * 2, true);
+        // data chunk
+        writeString(view, 36, 'data');
+        view.setUint32(40, samples.length * 2, true);
 
-                            // Write the PCM samples
-                            let index = 44;
-                            for (let i = 0; i < samples.length; i++) {
-                                let s = Math.max(-1, Math.min(1, samples[i]));
-                                s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                                view.setInt16(index, s, true);
-                                index += 2;
-                            }
+        // Write the PCM samples
+        let index = 44;
+        for (let i = 0; i < samples.length; i++) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            view.setInt16(index, s, true);
+            index += 2;
+        }
 
-                            return new Blob([buffer], { type: 'audio/wav' });
-                        }
+        return new Blob([buffer], {type: 'audio/wav'});
+    }
 
-                        // Helper to write strings to DataView
-                        function writeString(view, offset, string) {
-                            for (let i = 0; i < string.length; i++) {
-                                view.setUint8(offset + i, string.charCodeAt(i));
-                            }
-                        }
+    // Helper to write strings to DataView
+    function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    }
 
 </script>
 
