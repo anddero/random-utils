@@ -138,10 +138,41 @@
 
             // Initialize synth on first click if not already created
             if (!g_synth) {
-                g_synth = new Tone.Synth({
-                    oscillator: { type: 'square' },
-                    envelope: { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.1 }
-                }).toDestination();
+                g_synth = new Tone.PolySynth(Tone.Synth, {
+                                    oscillator: {
+                                        type: 'square8', // Use square wave with more harmonics
+                                        phase: 0,
+                                        harmonicity: 0.5, // Add some inharmonic content
+                                    },
+                                    envelope: {
+                                        attack: 0.001, // Extremely fast attack
+                                        decay: 0.01,
+                                        sustain: 0.9, 
+                                        release: 0.01, // Very short release for that abrupt Nokia sound
+                                    }
+                                })
+                                .connect(new Tone.Filter({
+                                    type: "highpass",
+                                    frequency: 1200, // Higher frequency cutoff
+                                    rolloff: -24 // Steeper slope
+                                }))
+                                .connect(new Tone.BiquadFilter({
+                                    type: "peaking",
+                                    frequency: 2500,
+                                    gain: 15, // Boost the higher mids for more "piercing" sound
+                                    Q: 3
+                                }))
+                                .connect(new Tone.Distortion({
+                                    distortion: 0.7, // More aggressive distortion
+                                    wet: 0.5 // Stronger effect
+                                }))
+                                .connect(new Tone.Compressor({
+                                    threshold: -24,
+                                    ratio: 12,
+                                    attack: 0.003,
+                                    release: 0.25
+                                }))
+                                .toDestination();
             }
 
             await Tone.start();
@@ -342,11 +373,68 @@
                     sampleRate: targetSampleRate
                 });
                 
-                // Load and register the AudioWorklet processor
+                // Create and register the AudioWorklet processor inline
                 try {
-                    await audioCtx.audioWorklet.addModule('downsampler-processor.js');
+                    // Define the processor code as a string
+                    const processorCode = `
+                        class DownsamplerProcessor extends AudioWorkletProcessor {
+                          constructor() {
+                            super();
+                            this.recBuffers = [];
+                            this.recLength = 0;
+                            
+                            // Listen for messages from the main thread
+                            this.port.onmessage = (event) => {
+                              if (event.data.message === 'complete') {
+                                // Send the collected buffers back when processing is complete
+                                this.port.postMessage({
+                                  message: 'buffers',
+                                  recBuffers: this.recBuffers,
+                                  recLength: this.recLength
+                                });
+                              }
+                            };
+                          }
+                
+                          process(inputs, outputs) {
+                            // Get input data (we expect mono or will convert to mono)
+                            const inputChannels = inputs[0];
+                            if (inputChannels.length === 0) return true;
+                            
+                            // Convert to mono if needed by averaging all channels
+                            const monoData = new Float32Array(inputChannels[0].length);
+                            
+                            for (let i = 0; i < monoData.length; i++) {
+                              let sum = 0;
+                              for (let channel = 0; channel < inputChannels.length; channel++) {
+                                sum += inputChannels[channel][i];
+                              }
+                              monoData[i] = sum / inputChannels.length;
+                            }
+                            
+                            // Store the mono data
+                            this.recBuffers.push(new Float32Array(monoData));
+                            this.recLength += monoData.length;
+                            
+                            // Keep the processor alive
+                            return true;
+                          }
+                        }
+                
+                        registerProcessor('downsampler-processor', DownsamplerProcessor);
+                    `;
+                    
+                    // Create a Blob URL from the processor code
+                    const blob = new Blob([processorCode], { type: 'application/javascript' });
+                    const processorUrl = URL.createObjectURL(blob);
+                    
+                    // Load the processor from the Blob URL
+                    await audioCtx.audioWorklet.addModule(processorUrl);
+                    
+                    // Clean up the Blob URL after it's loaded
+                    URL.revokeObjectURL(processorUrl);
                 } catch (e) {
-                    console.error("Error loading audio worklet:", e);
+                    console.error("Error setting up audio worklet:", e);
                     reject(e);
                     return;
                 }
