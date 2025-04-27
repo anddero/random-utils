@@ -296,8 +296,13 @@
         console.log(nodesStr);
         const settings = parseRtttlSettings(settingsStr);
         console.log(settings);
-        let notes = nodesStr.split(',')
-            .map(parseRtttlNote);
+        let notes = nodesStr.split(/[, \n]+/);
+        console.log(notes);
+        notes = notes.map(n => n.trim());
+        console.log(notes);
+        notes = notes.filter(n => !!n);
+        console.log(notes);
+        notes = notes.map(parseRtttlNote);
         console.log(notes);
         notes = notes.map(n => convertRtttlNote(settings, n));
         console.log(notes);
@@ -362,7 +367,7 @@
                             super();
                             this.recBuffers = [];
                             this.recLength = 0;
-                            
+
                             // Listen for messages from the main thread
                             this.port.onmessage = (event) => {
                               if (event.data.message === 'complete') {
@@ -375,15 +380,15 @@
                               }
                             };
                           }
-                
+
                           process(inputs, outputs) {
                             // Get input data (we expect mono or will convert to mono)
                             const inputChannels = inputs[0];
                             if (inputChannels.length === 0) return true;
-                            
+
                             // Convert to mono if needed by averaging all channels
                             const monoData = new Float32Array(inputChannels[0].length);
-                            
+
                             for (let i = 0; i < monoData.length; i++) {
                               let sum = 0;
                               for (let channel = 0; channel < inputChannels.length; channel++) {
@@ -391,16 +396,16 @@
                               }
                               monoData[i] = sum / inputChannels.length;
                             }
-                            
+
                             // Store the mono data
                             this.recBuffers.push(new Float32Array(monoData));
                             this.recLength += monoData.length;
-                            
+
                             // Keep the processor alive
                             return true;
                           }
                         }
-                
+
                         registerProcessor('downsampler-processor', DownsamplerProcessor);
                     `;
 
