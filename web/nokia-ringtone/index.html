@@ -14,12 +14,12 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
-        
+
         h1 {
             text-align: center;
             color: #0066CC;
         }
-        
+
         textarea {
             width: 100%;
             margin-bottom: 10px;
@@ -27,7 +27,7 @@
             border-radius: 4px;
             border: 1px solid #ccc;
         }
-        
+
         button {
             background-color: #0066CC;
             color: white;
@@ -37,24 +37,24 @@
             cursor: pointer;
             margin-right: 10px;
         }
-        
+
         button:hover {
             background-color: #0055AA;
         }
-        
+
         .status {
             margin-top: 15px;
             padding: 10px;
             border-radius: 4px;
             display: none;
         }
-        
+
         .recording {
             background-color: #ffecec;
             color: #ff0000;
             display: block;
         }
-        
+
         .download-link {
             display: none;
             margin-top: 15px;
@@ -64,7 +64,7 @@
             color: white;
             border-radius: 4px;
         }
-        
+
         .download-link:hover {
             background-color: #45a049;
         }
@@ -87,7 +87,7 @@
 
     <button id="createButton">Play & Record & Download</button>
     <button id="stopButton" style="display: none;">Stop Recording</button>
-    
+
     <div id="statusMessage" class="status">Recording in progress...</div>
     <a id="downloadLink" class="download-link" href="#" download="nokia-ringtone.wav">Download Ringtone</a>
 
@@ -119,11 +119,11 @@
     async function onCreateButtonClick() {
         // TODO kmere What happens if clicked twice quickly?
         console.log("onCreateButtonClick");
-        
+
         // Reset UI
         document.getElementById('downloadLink').style.display = 'none';
         document.getElementById('createButton').disabled = true;
-        
+
         try {
             // Load Tone.js on first click
             if (!g_toneLoaded) {
@@ -139,19 +139,43 @@
             // Initialize synth on first click if not already created
             if (!g_synth) {
                 g_synth = new Tone.PulseOscillator({
-                    width: 0.8, // ultra-narrow pulse
-                    // frequency: 500, // high pitch (you can tweak this)
-                    // envelope: {
-                    //     attack: 0.001,
-                    //     release: 0.1,
-                    //     sustain: 0.9,
-                    //     decay: 0.1,
-                    // }
+                    frequency: 1000,  // Start with high frequency
+                    width: 0.8        // Moderate pulse width for PWM-like effect
                 }).toDestination();
 
-                // Add some distortion to simulate the "cheap speaker" effect
-                const distortion = new Tone.Distortion(0.4).toDestination(); // Increase distortion slightly
+                const distortion = new Tone.Distortion(0.6).toDestination();  // More distortion
                 g_synth.connect(distortion);
+
+                // const pwmLFO = new Tone.LFO({
+                //     frequency: 2,    // Low-frequency to modulate the width
+                //     min: 0.02,       // Very narrow pulse
+                //     max: 0.98        // Close to square but with modulation
+                // }).connect(g_synth.width);
+                // pwmLFO.start();
+                //
+                // const distortion = new Tone.Distortion(0.4).toDestination(); // Soft clipping
+                // g_synth.connect(distortion);
+                //
+                // const lowPassFilter = new Tone.Filter(1000, "lowpass").toDestination();  // 1kHz cutoff
+                // g_synth.connect(lowPassFilter);
+                //
+                // const highPassFilter = new Tone.Filter(20000, "highpass").toDestination(); // High cut-off at 20kHz
+                // lowPassFilter.connect(highPassFilter);
+
+// Set up the Tone.Part
+//                 g_currentPart = new Tone.Part((time, note) => {
+//                     const noteDuration = Tone.Time(note.dur).toSeconds();
+//
+//                     // Set the frequency for each note
+//                     g_synth.frequency.setValueAtTime(Tone.Frequency(note.note).toFrequency(), time);
+//
+//                     g_synth.start(time);
+//                     g_synth.stop(time + noteDuration);
+//                 }, toneNotes.map(n => [n.time, n]))
+//                     .start(0);
+//
+// // Start the LFO to modulate pulse width (PWM)
+
             }
 
 
@@ -184,7 +208,7 @@
                 return res;
             });
             console.log(toneNotes);
-            
+
             // Calculate total duration in seconds
             g_totalDuration = time + 1; // Add 1 second buffer
             console.log("Total duration: " + g_totalDuration + " seconds");
@@ -204,17 +228,17 @@
 
             // Start the transport
             Tone.Transport.start();
-            
+
             // Auto-stop recording after the total duration plus a small buffer
             g_recordingTimeout = setTimeout(() => {
                 if (g_isRecording) {
                     stopRecording();
                 }
             }, (g_totalDuration * 1000) + 500);
-            
+
             // Show stop button
             document.getElementById('stopButton').style.display = 'inline-block';
-            
+
         } catch (error) {
             console.error("Error in onCreateButtonClick:", error);
             document.getElementById('createButton').disabled = false;
@@ -224,54 +248,54 @@
     function startRecording() {
         g_recordedChunks = [];
         g_isRecording = true;
-        
+
         // Show recording status
         document.getElementById('statusMessage').textContent = "Recording in progress...";
         document.getElementById('statusMessage').classList.add('recording');
         document.getElementById('statusMessage').style.display = 'block';
-        
+
         // Create a MediaStream destination from Tone.js
         const dest = Tone.getContext().createMediaStreamDestination();
         g_synth.connect(dest);
-        
+
         // Create MediaRecorder
         g_mediaRecorder = new MediaRecorder(dest.stream);
-        
+
         g_mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
                 g_recordedChunks.push(event.data);
             }
         };
-        
+
         g_mediaRecorder.onstop = async () => {
             document.getElementById('statusMessage').textContent = "Processing audio...";
 
             // Process recorded audio chunks into 8000Hz mono WAV
             const originalBlob = new Blob(g_recordedChunks, { type: 'audio/wav' });
-            const downsampledBlob = await downsampleAudio(originalBlob, 8000);
-            const audioUrl = URL.createObjectURL(downsampledBlob);
-            
+            // const downsampledBlob = await downsampleAudio(originalBlob, 8000);
+            const audioUrl = URL.createObjectURL(originalBlob);
+
             const downloadLink = document.getElementById('downloadLink');
             downloadLink.href = audioUrl;
             downloadLink.style.display = 'inline-block';
-            
+
             document.getElementById('statusMessage').textContent = "Recording complete!";
             document.getElementById('statusMessage').classList.remove('recording');
             document.getElementById('stopButton').style.display = 'none';
             document.getElementById('createButton').disabled = false;
         };
-        
+
         g_mediaRecorder.start();
     }
-    
+
     function stopRecording() {
         if (g_isRecording && g_mediaRecorder) {
             g_isRecording = false;
             g_mediaRecorder.stop();
-            
+
             // Stop the transport
             Tone.Transport.stop();
-            
+
             // Clear the timeout if it exists
             if (g_recordingTimeout) {
                 clearTimeout(g_recordingTimeout);
@@ -354,7 +378,7 @@
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
                     sampleRate: targetSampleRate
                 });
-                
+
                 // Create and register the AudioWorklet processor inline
                 try {
                     // Define the processor code as a string
@@ -405,14 +429,14 @@
                 
                         registerProcessor('downsampler-processor', DownsamplerProcessor);
                     `;
-                    
+
                     // Create a Blob URL from the processor code
                     const blob = new Blob([processorCode], { type: 'application/javascript' });
                     const processorUrl = URL.createObjectURL(blob);
-                    
+
                     // Load the processor from the Blob URL
                     await audioCtx.audioWorklet.addModule(processorUrl);
-                    
+
                     // Clean up the Blob URL after it's loaded
                     URL.revokeObjectURL(processorUrl);
                 } catch (e) {
@@ -420,30 +444,30 @@
                     reject(e);
                     return;
                 }
-                
+
                 // Create an audio source from the blob
                 const fileReader = new FileReader();
-                
+
                 fileReader.onloadend = async () => {
                     try {
                         // Get the audio data
                         const arrayBuffer = fileReader.result;
                         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                        
+
                         // Create a recorder node
                         const source = audioCtx.createBufferSource();
                         source.buffer = audioBuffer;
-                        
+
                         // Create an AudioWorkletNode
                         const downsamplerNode = new AudioWorkletNode(audioCtx, 'downsampler-processor');
-                        
+
                         // Set up message handling to receive processed buffers
                         downsamplerNode.port.onmessage = (event) => {
                             if (event.data.message === 'buffers') {
                                 // Get the data from the processor
                                 const recBuffers = event.data.recBuffers;
                                 const recLength = event.data.recLength;
-                                
+
                                 // Concatenate all buffers
                                 const result = new Float32Array(recLength);
                                 let offset = 0;
@@ -451,55 +475,55 @@
                                     result.set(recBuffers[i], offset);
                                     offset += recBuffers[i].length;
                                 }
-                                
+
                                 // Create WAV blob with the target sample rate mono
                                 const wavBlob = encodeWAV(result, targetSampleRate);
                                 resolve(wavBlob);
-                                
+
                                 // Clean up
                                 source.disconnect();
                                 downsamplerNode.disconnect();
                             }
                         };
-                        
+
                         // When done, notify the processor to send back the collected buffers
                         source.onended = () => {
                             downsamplerNode.port.postMessage({ message: 'complete' });
                         };
-                        
+
                         // Connect the nodes
                         source.connect(downsamplerNode);
                         downsamplerNode.connect(audioCtx.destination);
-                        
+
                         // Start processing
                         source.start(0);
-                        
+
                     } catch (error) {
                         console.error("Error processing audio:", error);
                         reject(error);
                     }
                 };
-                
+
                 fileReader.onerror = reject;
                 fileReader.readAsArrayBuffer(audioBlob);
-                
+
             } catch (error) {
                 console.error("Error setting up audio context:", error);
                 reject(error);
             }
         });
     }
-                        
+
                         // Simple function to encode Float32Array as WAV
                         function encodeWAV(samples, sampleRate) {
                             const buffer = new ArrayBuffer(44 + samples.length * 2);
                             const view = new DataView(buffer);
-                            
+
                             // RIFF header
                             writeString(view, 0, 'RIFF');
                             view.setUint32(4, 36 + samples.length * 2, true);
                             writeString(view, 8, 'WAVE');
-                            
+
                             // fmt chunk
                             writeString(view, 12, 'fmt ');
                             view.setUint32(16, 16, true);
@@ -509,11 +533,11 @@
                             view.setUint32(28, sampleRate * 2, true); // Byte rate
                             view.setUint16(32, 2, true); // Block align
                             view.setUint16(34, 16, true); // Bits per sample
-                            
+
                             // data chunk
                             writeString(view, 36, 'data');
                             view.setUint32(40, samples.length * 2, true);
-                            
+
                             // Write the PCM samples
                             let index = 44;
                             for (let i = 0; i < samples.length; i++) {
@@ -522,10 +546,10 @@
                                 view.setInt16(index, s, true);
                                 index += 2;
                             }
-                            
+
                             return new Blob([buffer], { type: 'audio/wav' });
                         }
-                        
+
                         // Helper to write strings to DataView
                         function writeString(view, offset, string) {
                             for (let i = 0; i < string.length; i++) {
