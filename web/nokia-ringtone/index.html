@@ -137,7 +137,10 @@
 
             // Initialize synth on first click if not already created
             if (!g_synth) {
-                g_synth = new Tone.Synth({oscillator: {type: 'square'}}).toDestination();
+                g_synth = new Tone.Synth({
+                    oscillator: { type: 'square' },
+                    envelope: { attack: 0.01, decay: 0.05, sustain: 0.5, release: 0.1 }
+                }).toDestination();
             }
 
             await Tone.start();
