@@ -28,8 +28,9 @@
 <script src="https://unpkg.com/tone"></script>
 <script>
 
-    // GLOBAL SERVICES
+    // GLOBAL STATE
 
+    let toneLoaded = false;
     let g_synth = null;
 
     // EVENT BINDINGS
@@ -38,30 +39,42 @@
 
     // EVENT HANDLERS
 
-    function onCreateButtonClick() {
+    async function onCreateButtonClick() {
+        // TODO kmere What happens if clicked twice quickly?
         console.log("onCreateButtonClick");
-    
+
+        // Load Tone.js on first click
+        if (!toneLoaded) {
+            await loadTone();
+            toneLoaded = true;
+        }
+
         // Initialize synth on first click if not already created
         if (!g_synth) {
             g_synth = new Tone.Synth({ oscillator: { type: 'square' } }).toDestination();
         }
-    
-        // Start audio context if it's not started
-        Tone.start();
+
+        // Start audio context
+        await Tone.start();
 
         const notes = [{time: 0, note: "A4", dur: "4n"}, {time: "+0.5", note: "F4", dur: "8n"}, {time: "+0.75", note: "G4", dur: "8n"}];
 
-        // Use Part for proper scheduling
         const part = new Tone.Part((time, note) => {
             g_synth.triggerAttackRelease(note.note, note.dur, time);
         }, notes.map(n => [n.time, n]));
 
-        // Start the part
         part.start(Tone.now());
     }
 
-    // FUNCTIONS WITHOUT SIDE EFFECTS
-
+    function loadTone() {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = "https://unpkg.com/tone";
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+        });
+    }
 </script>
 
 </body>
