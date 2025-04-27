@@ -138,22 +138,10 @@
 
             // Initialize synth on first click if not already created
             if (!g_synth) {
-                g_synth = new Tone.Synth({
-                    oscillator: {
-                        type: 'square'
-                    },
-                    envelope: {
-                        attack: 0.001,
-                        decay: 0.01,
-                        sustain: 1,
-                        release: 0.1
-                    }
-                });
-
-                const crusher = new Tone.BitCrusher(4).toDestination(); // 4-bit hell
-                const distortion = new Tone.Distortion(0.7).connect(crusher);
-
-                g_synth.connect(distortion);
+                g_synth = new Tone.PulseOscillator({
+                    frequency: 1000, // play high pitch
+                    width: 0.05 // super narrow pulse
+                }).toDestination();
             }
 
             await Tone.start();
@@ -195,8 +183,10 @@
 
             // Create new part
             g_currentPart = new Tone.Part((time, note) => {
-                g_synth.triggerAttackRelease(note.note, note.dur, time);
-            }, toneNotes.map(n => [n.time, n]));
+                g_synth.frequency.setValueAtTime(Tone.Frequency(note.note).toFrequency(), time);
+                g_synth.start(time);
+                g_synth.stop(time + Tone.Time(note.dur).toSeconds()); // Stop after the note duration
+            }, toneNotes.map(n => [n.time, n]))
 
             // Start the part at the beginning of the timeline
             g_currentPart.start(0);
