@@ -7,6 +7,7 @@
     <title>Nokia 3310 Ringtone Maker</title>
 
     <!-- CSS Section -->
+    <!--suppress CssUnusedSymbol -->
     <style>
         .container {
             max-width: 600px;
@@ -82,7 +83,7 @@
 
 <!-- Main Content Section -->
 <main class="container">
-    <p>Enter your RTTTL code below or use the default example:</p>
+    <label for="rtttl"><p>Enter your RTTTL code below or use the default example:</p></label>
     <textarea id="rtttl" rows="3" cols="60">d=32,o=5,b=180:16f.6,16d#.6,8g.,8a.,16d.6,16c.6,8d#.,8f.,16c.6,16a#.,8d.,8f.,4a#.,4p.,1p.,8p.</textarea><br>
 
     <button id="createButton">Play & Record & Download</button>
@@ -94,6 +95,7 @@
 </main>
 
 <!-- JavaScript Section -->
+<!--suppress JSUnresolvedLibraryURL -->
 <script src="https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/dist/recorder.js"></script>
 <script>
 
