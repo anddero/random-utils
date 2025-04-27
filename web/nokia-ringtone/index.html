@@ -8,6 +8,66 @@
 
     <!-- CSS Section -->
     <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #0066CC;
+        }
+        
+        textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        button {
+            background-color: #0066CC;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #0055AA;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .recording {
+            background-color: #ffecec;
+            color: #ff0000;
+            display: block;
+        }
+        
+        .download-link {
+            display: none;
+            margin-top: 15px;
+            padding: 10px;
+            text-decoration: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+        }
+        
+        .download-link:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 
@@ -15,14 +75,21 @@
 
 <!-- Header Section -->
 <header>
+    <div class="container">
+        <h1>Nokia 3310 Ringtone Maker</h1>
+    </div>
 </header>
 
 <!-- Main Content Section -->
-<main>
-
-    <textarea id="rtttl" rows="3" cols="60">d=4,o=5,b=100: a4,f8,g8</textarea><br>
+<main class="container">
+    <p>Enter your RTTTL code below or use the default example:</p>
+    <textarea id="rtttl" rows="3" cols="60">d=4,o=5,b=100: 4a,8f,8g</textarea><br>
 
     <button id="createButton">Play & Record & Download</button>
+    <button id="stopButton" style="display: none;">Stop Recording</button>
+    
+    <div id="statusMessage" class="status">Recording in progress...</div>
+    <a id="downloadLink" class="download-link" href="#" download="nokia-ringtone.wav">Download Ringtone</a>
 
 </main>
 
@@ -34,22 +101,38 @@
     let g_toneLoaded = false;
     let g_synth = null;
     let g_currentPart = null;  // Keep track of the current part
+    let g_audioContext = null;
+    let g_mediaRecorder = null;
+    let g_recordedChunks = [];
+    let g_isRecording = false;
+    let g_totalDuration = 0;
+    let g_recordingTimeout = null;
 
     // EVENT BINDINGS
 
     document.getElementById('createButton').addEventListener('click', onCreateButtonClick);
+    document.getElementById('stopButton').addEventListener('click', stopRecording);
 
     // EVENT HANDLERS
 
     async function onCreateButtonClick() {
         // TODO kmere What happens if clicked twice quickly?
         console.log("onCreateButtonClick");
-
+        
+        // Reset UI
+        document.getElementById('downloadLink').style.display = 'none';
+        document.getElementById('createButton').disabled = true;
+        
         try {
             // Load Tone.js on first click
             if (!g_toneLoaded) {
                 await loadTone();
                 g_toneLoaded = true;
+            }
+
+            // Initialize audio context if not already created
+            if (!g_audioContext) {
+                g_audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
 
             // Initialize synth on first click if not already created
@@ -86,6 +169,13 @@
                 return res;
             });
             console.log(toneNotes);
+            
+            // Calculate total duration in seconds
+            g_totalDuration = time + 1; // Add 1 second buffer
+            console.log("Total duration: " + g_totalDuration + " seconds");
+
+            // Start recording
+            startRecording();
 
             // Create new part
             g_currentPart = new Tone.Part((time, note) => {
@@ -97,8 +187,75 @@
 
             // Start the transport
             Tone.Transport.start();
+            
+            // Auto-stop recording after the total duration plus a small buffer
+            g_recordingTimeout = setTimeout(() => {
+                if (g_isRecording) {
+                    stopRecording();
+                }
+            }, (g_totalDuration * 1000) + 500);
+            
+            // Show stop button
+            document.getElementById('stopButton').style.display = 'inline-block';
+            
         } catch (error) {
             console.error("Error in onCreateButtonClick:", error);
+            document.getElementById('createButton').disabled = false;
+        }
+    }
+
+    function startRecording() {
+        g_recordedChunks = [];
+        g_isRecording = true;
+        
+        // Show recording status
+        document.getElementById('statusMessage').textContent = "Recording in progress...";
+        document.getElementById('statusMessage').classList.add('recording');
+        document.getElementById('statusMessage').style.display = 'block';
+        
+        // Create a MediaStream destination from Tone.js
+        const dest = Tone.getContext().createMediaStreamDestination();
+        g_synth.connect(dest);
+        
+        // Create MediaRecorder
+        g_mediaRecorder = new MediaRecorder(dest.stream);
+        
+        g_mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                g_recordedChunks.push(event.data);
+            }
+        };
+        
+        g_mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(g_recordedChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = audioUrl;
+            downloadLink.style.display = 'inline-block';
+            
+            document.getElementById('statusMessage').textContent = "Recording complete!";
+            document.getElementById('statusMessage').classList.remove('recording');
+            document.getElementById('stopButton').style.display = 'none';
+            document.getElementById('createButton').disabled = false;
+        };
+        
+        g_mediaRecorder.start();
+    }
+    
+    function stopRecording() {
+        if (g_isRecording && g_mediaRecorder) {
+            g_isRecording = false;
+            g_mediaRecorder.stop();
+            
+            // Stop the transport
+            Tone.Transport.stop();
+            
+            // Clear the timeout if it exists
+            if (g_recordingTimeout) {
+                clearTimeout(g_recordingTimeout);
+                g_recordingTimeout = null;
+            }
         }
     }
 
