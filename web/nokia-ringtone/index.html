@@ -25,13 +25,13 @@
 </main>
 
 <!-- JavaScript Section -->
-<script src="https://unpkg.com/tone"></script>
 <script>
 
     // GLOBAL STATE
 
-    let toneLoaded = false;
+    let g_toneLoaded = false;
     let g_synth = null;
+    let g_currentPart = null;  // Keep track of the current part
 
     // EVENT BINDINGS
 
@@ -43,27 +43,49 @@
         // TODO kmere What happens if clicked twice quickly?
         console.log("onCreateButtonClick");
 
-        // Load Tone.js on first click
-        if (!toneLoaded) {
-            await loadTone();
-            toneLoaded = true;
+        try {
+            // Load Tone.js on first click
+            if (!g_toneLoaded) {
+                await loadTone();
+                g_toneLoaded = true;
+            }
+
+            // Initialize synth on first click if not already created
+            if (!g_synth) {
+                g_synth = new Tone.Synth({oscillator: {type: 'square'}}).toDestination();
+            }
+
+            await Tone.start();
+
+            // Stop any previous transport
+            Tone.Transport.stop();
+            // Reset transport to beginning
+            Tone.Transport.position = 0;
+
+            // Dispose of previous part if it exists
+            if (g_currentPart) {
+                g_currentPart.dispose();
+            }
+
+            const notes = [
+                {time: 0, note: "A4", dur: "4n"},
+                {time: "+0.5", note: "F4", dur: "8n"},
+                {time: "+0.75", note: "G4", dur: "8n"
+            }];
+
+            // Create new part
+            g_currentPart = new Tone.Part((time, note) => {
+                g_synth.triggerAttackRelease(note.note, note.dur, time);
+            }, notes.map(n => [n.time, n]));
+
+            // Start the part at the beginning of the timeline
+            g_currentPart.start(0);
+
+            // Start the transport
+            Tone.Transport.start();
+        } catch (error) {
+            console.error("Error in onCreateButtonClick:", error);
         }
-
-        // Initialize synth on first click if not already created
-        if (!g_synth) {
-            g_synth = new Tone.Synth({ oscillator: { type: 'square' } }).toDestination();
-        }
-
-        // Start audio context
-        await Tone.start();
-
-        const notes = [{time: 0, note: "A4", dur: "4n"}, {time: "+0.5", note: "F4", dur: "8n"}, {time: "+0.75", note: "G4", dur: "8n"}];
-
-        const part = new Tone.Part((time, note) => {
-            g_synth.triggerAttackRelease(note.note, note.dur, time);
-        }, notes.map(n => [n.time, n]));
-
-        part.start(Tone.now());
     }
 
     function loadTone() {
@@ -75,6 +97,7 @@
             document.body.appendChild(script);
         });
     }
+
 </script>
 
 </body>
