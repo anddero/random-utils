@@ -28,9 +28,9 @@
 <script src="https://unpkg.com/tone"></script>
 <script>
 
-    // GLOBAL CONSTANTS
+    // GLOBAL SERVICES
 
-    const g_synth = new Tone.Synth({ oscillator: { type: 'square' } }).toDestination();
+    let g_synth = null;
 
     // EVENT BINDINGS
 
@@ -40,6 +40,11 @@
 
     function onCreateButtonClick() {
         console.log("onCreateButtonClick");
+    
+        // Initialize synth on first click if not already created
+        if (!g_synth) {
+            g_synth = new Tone.Synth({ oscillator: { type: 'square' } }).toDestination();
+        }
     
         // Start audio context if it's not started
         Tone.start();
