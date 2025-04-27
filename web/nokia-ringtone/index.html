@@ -139,10 +139,21 @@
             // Initialize synth on first click if not already created
             if (!g_synth) {
                 g_synth = new Tone.PulseOscillator({
-                    frequency: 1000, // play high pitch
-                    width: 0.05 // super narrow pulse
+                    width: 0.8, // ultra-narrow pulse
+                    // frequency: 500, // high pitch (you can tweak this)
+                    // envelope: {
+                    //     attack: 0.001,
+                    //     release: 0.1,
+                    //     sustain: 0.9,
+                    //     decay: 0.1,
+                    // }
                 }).toDestination();
+
+                // Add some distortion to simulate the "cheap speaker" effect
+                const distortion = new Tone.Distortion(0.4).toDestination(); // Increase distortion slightly
+                g_synth.connect(distortion);
             }
+
 
             await Tone.start();
 
