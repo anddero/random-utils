@@ -328,8 +328,8 @@
     }
 
     function parseRtttlNote(noteStr) {
-        const match = noteStr.match(/(\d*)([a-gp])(#?)(\d*)(\.?)/i);
-        const [_, duration, note, sharp, octave, halfExtend] = match;
+        const match = noteStr.match(/(\d*)([a-gp])(#?)(\.?)(\d*)/i);
+        const [_, duration, note, sharp, halfExtend, octave] = match;
         return {
             duration: duration,
             note: note.toUpperCase(),
@@ -354,7 +354,7 @@
         const duration = (rtttlNote.duration || settings.duration)
             + 'n'
             + (rtttlNote.halfExtend ? '.' : '');
-        let note = rtttlNote.note === 'p' ? null : rtttlNote.note;
+        let note = rtttlNote.note === 'P' ? null : rtttlNote.note;
         if (!!note && rtttlNote.sharp) note += '#';
         if (!!note) note += rtttlNote.octave || settings.octave;
         return {
