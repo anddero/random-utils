@@ -20,7 +20,9 @@
 <!-- Main Content Section -->
 <main>
 
-    <button id="createButton">Create</button>
+    <textarea id="rtttl" rows="3" cols="60">d=4,o=5,b=100: a4,f8,g8</textarea><br>
+
+    <button id="createButton">Play & Record & Download</button>
 
 </main>
 
@@ -67,16 +69,28 @@
                 g_currentPart.dispose();
             }
 
-            const notes = [
-                {time: 0, note: "A4", dur: "4n"},
-                {time: "+0.5", note: "F4", dur: "8n"},
-                {time: "+0.75", note: "G4", dur: "8n"
-            }];
+            const {settings, notes} = parseRtttl(document.getElementById('rtttl').value);
+            console.log(settings);
+            console.log(notes);
+
+            Tone.Transport.bpm.value = settings.bpm;
+
+            let time = 0.0;
+            const toneNotes = notes.map(n => {
+                const res = {
+                    time: time,
+                    note: n.note,
+                    dur: n.duration
+                };
+                time += Tone.Time(n.duration).toSeconds();
+                return res;
+            });
+            console.log(toneNotes);
 
             // Create new part
             g_currentPart = new Tone.Part((time, note) => {
                 g_synth.triggerAttackRelease(note.note, note.dur, time);
-            }, notes.map(n => [n.time, n]));
+            }, toneNotes.map(n => [n.time, n]));
 
             // Start the part at the beginning of the timeline
             g_currentPart.start(0);
@@ -96,6 +110,61 @@
             script.onerror = reject;
             document.body.appendChild(script);
         });
+    }
+
+    // FUNCTIONS WITHOUT SIDE-EFFECTS
+
+    function parseRtttl(rtttl) {
+        const [settingsStr, notesStr] = rtttl.split(':');
+        console.log(settingsStr);
+        console.log(notesStr);
+        const settings = parseRtttlSettings(settingsStr);
+        console.log(settings);
+        let notes = notesStr.split(',')
+            .map(parseRtttlNote);
+        console.log(notes);
+        notes = notes.map(n => convertRtttlNote(settings, n));
+        console.log(notes);
+        return {
+            settings: settings,
+            notes: notes
+        };
+    }
+
+    function parseRtttlNote(noteStr) {
+        const match = noteStr.match(/(\d*)([a-gp])(#?)(\d*)(\.?)/i);
+        const [_, duration, note, sharp, octave, halfExtend] = match;
+        return {
+            duration: duration,
+            note: note.toUpperCase(),
+            sharp: !!sharp,
+            octave: octave,
+            halfExtend: !!halfExtend
+        };
+    }
+
+    function parseRtttlSettings(settingsStr) {
+        const settings = Object.fromEntries(
+            settingsStr.split(',').map(s => s.split('='))
+        );
+        return {
+            bpm: parseInt(settings.b || 63),
+            octave: parseInt(settings.o || 5),
+            duration: parseInt(settings.d || 4)
+        };
+    }
+
+    function convertRtttlNote(settings, rtttlNote) {
+        const duration = (rtttlNote.duration || settings.duration)
+            + 'n'
+            + (rtttlNote.halfExtend ? '.' : '');
+        let note = rtttlNote.note === 'p' ? null : rtttlNote.note;
+        if (!!note && rtttlNote.sharp) note += '#';
+        if (!!note) note += rtttlNote.octave || settings.octave;
+        return {
+            duration: duration,
+            note: note
+        };
     }
 
 </script>
